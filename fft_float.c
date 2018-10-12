@@ -1,50 +1,122 @@
-#include <stdio.h>
 #include <math.h>
-#include <complex.h>
- 
-double PI;
-typedef double complex cplx;
- 
-void _fft(cplx buf[], cplx out[], int n, int step)
-{
-	if (step < n) {
-		_fft(out, buf, n, step * 2);
-		_fft(out + step, buf + step, n, step * 2);
- 
-		for (int i = 0; i < n; i += 2 * step) {
-			cplx t = cexp(-I * PI * i / n) * out[i + step];
-			buf[i / 2]     = out[i] + t;
-			buf[(i + n)/2] = out[i] - t;
-		}
-	}
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+typedef struct Comp {
+    /* comp of the form: a + bi */
+    double a, b;
+} Comp;
+
+Comp comp_create(double a, double b) {
+    Comp res;
+    res.a = a;
+    res.b = b;
+    return res;
 }
- 
-void fft(cplx buf[], int n)
-{
-	cplx out[n];
-	for (int i = 0; i < n; i++) out[i] = buf[i];
- 
-	_fft(buf, out, n, 1);
+
+Comp comp_add(Comp c1, Comp c2) {
+    Comp res = c1;
+    res.a += c2.a;
+    res.b += c2.b;
+    return res;
 }
- 
- 
-void show(const char * s, cplx buf[]) {
-	printf("%s", s);
-	for (int i = 0; i < 8; i++)
-		if (!cimag(buf[i]))
-			printf("%g ", creal(buf[i]));
-		else
-			printf("(%g, %g) ", creal(buf[i]), cimag(buf[i]));
+
+Comp comp_sub(Comp c1, Comp c2) {
+    Comp res = c1;
+    res.a -= c2.a;
+    res.b -= c2.b;
+    return res;
 }
- 
-int main()
-{
-	PI = atan2(1, 1) * 4;
-	cplx buf[] = {1, 1, 1, 1, 0, 0, 0, 0};
- 
-	show("Data: ", buf);
-	fft(buf, 8);
-	show("\nFFT : ", buf);
- 
-	return 0;
+
+Comp comp_mul(Comp c1, Comp c2) {
+    Comp res;
+    res.a = c1.a * c2.a - c1.b * c2.b;
+    res.b = c1.b * c2.a + c1.a * c2.b;
+    return res;
+}
+
+
+void comp_print(Comp comp) {
+    printf("%.6f + %.6f i\n", comp.a, comp.b);
+}
+
+/* const double PI = acos(-1); */
+#define PI 3.141592653589793
+#define SQR(x) ((x) * (x))
+
+/* Calculate e^(ix) */
+Comp comp_euler(double x) {
+    Comp res;
+    res.a = cos(x);
+    res.b = sin(x);
+    return res;
+}
+
+#define comp_mul_self(c, c2) \
+do { \
+    double ca = c->a; \
+    c->a = ca * c2->a - c->b * c2->b; \
+    c->b = c->b * c2->a + ca * c2->b; \
+} while (0)
+
+void fft(const Comp *sig, Comp *f, int s, int n, int inv) {
+    int i, hn = n >> 1;
+    Comp ep = comp_euler((inv ? PI : -PI) / (double)hn), ei;
+    Comp *pi = &ei, *pp = &ep;
+    if (!hn) *f = *sig;
+    else
+    {
+        fft(sig, f, s << 1, hn, inv);
+        fft(sig + s, f + hn, s << 1, hn, inv);
+        pi->a = 1;
+        pi->b = 0;
+        for (i = 0; i < hn; i++)
+        {
+            Comp even = f[i], *pe = f + i, *po = pe + hn;
+            comp_mul_self(po, pi);
+            pe->a += po->a;
+            pe->b += po->b;
+            po->a = even.a - po->a;
+            po->b = even.b - po->b;
+            comp_mul_self(pi, pp);
+        }
+    }
+}
+
+void print_result(const Comp *sig, const Comp *sig0, int n) {
+    int i;
+    double err = 0;
+    for (i = 0; i < n; i++)
+    {
+        Comp t = sig0[i];
+        t.a /= n;
+        t.b /= n;
+        comp_print(t);
+        t = comp_sub(t, sig[i]);
+        err += t.a * t.a + t.b * t.b;
+    }
+    printf("Error Squared = %.6f\n", err);
+}
+int main() {
+    int n, i, k;
+    Comp *sig, *f, *sig0;
+    scanf("%d", &k);
+    n = 1 << k;
+    sig = (Comp *)malloc(sizeof(Comp) * (size_t)n);
+    sig0 = (Comp *)malloc(sizeof(Comp) * (size_t)n);
+    f = (Comp *)malloc(sizeof(Comp) * (size_t)n);
+    for (i = 0; i < n; i++)
+    {
+        sig[i].a = rand() % 10;
+        sig[i].b = 0;
+    }
+    puts("## Original Signal ##");
+    for (i = 0; i < n; i++)
+        comp_print(sig[i]);
+    puts("#####################");
+    test_dft(sig, f, sig0, n);
+    test_fft(sig, f, sig0, n);
+
+    return 0;
 }
