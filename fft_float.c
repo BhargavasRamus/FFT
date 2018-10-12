@@ -15,38 +15,16 @@ Comp comp_create(double a, double b) {
     return res;
 }
 
-Comp comp_add(Comp c1, Comp c2) {
-    Comp res = c1;
-    res.a += c2.a;
-    res.b += c2.b;
-    return res;
-}
-
-Comp comp_sub(Comp c1, Comp c2) {
-    Comp res = c1;
-    res.a -= c2.a;
-    res.b -= c2.b;
-    return res;
-}
-
-Comp comp_mul(Comp c1, Comp c2) {
-    Comp res;
-    res.a = c1.a * c2.a - c1.b * c2.b;
-    res.b = c1.b * c2.a + c1.a * c2.b;
-    return res;
-}
-
-
 void comp_print(Comp comp) {
     printf("%.6f + %.6f i\n", comp.a, comp.b);
 }
 
-/* const double PI = acos(-1); */
+
 #define PI 3.141592653589793
-#define SQR(x) ((x) * (x))
+
 
 /* Calculate e^(ix) */
-Comp comp_euler(double x) {
+Comp comp_exp(double x) {
     Comp res;
     res.a = cos(x);
     res.b = sin(x);
@@ -62,7 +40,7 @@ do { \
 
 void fft(const Comp *sig, Comp *f, int s, int n, int inv) {
     int i, hn = n >> 1;
-    Comp ep = comp_euler((inv ? PI : -PI) / (double)hn), ei;
+    Comp ep = comp_exp((inv ? PI : -PI) / (double)hn), ei;
     Comp *pi = &ei, *pp = &ep;
     if (!hn) *f = *sig;
     else
@@ -83,40 +61,33 @@ void fft(const Comp *sig, Comp *f, int s, int n, int inv) {
         }
     }
 }
-
-void print_result(const Comp *sig, const Comp *sig0, int n) {
+void test_fft(const Comp *sig, Comp *f, int n) {
     int i;
-    double err = 0;
+    puts("## ---------------- FFT ---------------- ##");
+    fft(sig, f, 1, n, 0);
     for (i = 0; i < n; i++)
-    {
-        Comp t = sig0[i];
-        t.a /= n;
-        t.b /= n;
-        comp_print(t);
-        t = comp_sub(t, sig[i]);
-        err += t.a * t.a + t.b * t.b;
-    }
-    printf("Error Squared = %.6f\n", err);
+        comp_print(f[i]);
 }
+
 int main() {
     int n, i, k;
-    Comp *sig, *f, *sig0;
+    Comp *sig, *f;
+    printf("provide the value of k for n=2^k\n");
     scanf("%d", &k);
     n = 1 << k;
     sig = (Comp *)malloc(sizeof(Comp) * (size_t)n);
-    sig0 = (Comp *)malloc(sizeof(Comp) * (size_t)n);
     f = (Comp *)malloc(sizeof(Comp) * (size_t)n);
     for (i = 0; i < n; i++)
     {
-        sig[i].a = rand() % 10;
-        sig[i].b = 0;
+        sig[i].a = ((double)rand()/(double)(RAND_MAX)) * 10.0;
+        sig[i].b = ((double)rand()/(double)(RAND_MAX)) * 10.0;
     }
-    puts("## Original Signal ##");
+    puts("## ------------ Original Signal ------------ ##");
     for (i = 0; i < n; i++)
         comp_print(sig[i]);
-    puts("#####################");
-    test_dft(sig, f, sig0, n);
-    test_fft(sig, f, sig0, n);
+    puts("---------------------------------------------");
+    
+    test_fft(sig, f, n);
 
     return 0;
 }
