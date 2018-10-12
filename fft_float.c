@@ -30,14 +30,14 @@ Comp comp_exp(double x) {
     res.b = sin(x);
     return res;
 }
-
+/*arithematic for real and imaginary*/
 #define comp_mul_self(c, c2) \
 do { \
     double ca = c->a; \
     c->a = ca * c2->a - c->b * c2->b; \
     c->b = c->b * c2->a + ca * c2->b; \
 } while (0)
-
+/*cooly tukey fft is used*/
 void fft(const Comp *sig, Comp *f, int s, int n, int inv) {
     int i, hn = n >> 1;
     Comp ep = comp_exp((inv ? PI : -PI) / (double)hn), ei;
