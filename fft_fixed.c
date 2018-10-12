@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define PI 3.141592653589793
-
+#define PI 3.141592653589793    
+#define q 7         /*q factor*/
 
 typedef struct Comp {
     /* comp of the form: a + bi */
@@ -19,8 +19,8 @@ Comp comp_create(int a, int b) {
 }
 
 void comp_print(Comp comp) {
-    printf("%.6f + %.6f i\n", comp.a/(double)(pow(2,7)), comp.b/(double)(pow(2,7)));
- //   printf("%d + %d i\n", comp.a, comp.b);
+    printf("%.6f + %.6f i\n", comp.a/(double)(1<<q), comp.b/(double)(1<<q));
+ //   printf("%d + %d i\n", comp.a, comp.b);    /*fixed point*/
 }
 
 
@@ -31,7 +31,7 @@ Comp comp_exp(double x) {
     res.b = sin(x);
     return res;
 }
-
+/*creating conditions for real and imaginary arithematic*/
 #define comp_mul_self(c, c2) \
 do { \
     int ca = c->a; \
@@ -39,6 +39,7 @@ do { \
     c->b = c->b * c2->a + ca * c2->b; \
 } while (0)
 
+/*cooley tukey fft is used*/
 void fft(const Comp *sig, Comp *f, int s, int n, int inv) {
     int i, hn = n >> 1;
     Comp ep = comp_exp((inv ? PI : -PI) / (double)hn), ei;
@@ -80,8 +81,8 @@ int main() {
     f = (Comp *)malloc(sizeof(Comp) * (size_t)n);
     for (i = 0; i < n; i++)
     {
-        sig[i].a = (((double)rand()/(double)(RAND_MAX)) * 10.0)*(pow(2,7));
-        sig[i].b = (((double)rand()/(double)(RAND_MAX)) * 10.0)*(pow(2,7));
+        sig[i].a = (((double)rand()/(double)(RAND_MAX)) * 10.0)*(1<<q);
+        sig[i].b = (((double)rand()/(double)(RAND_MAX)) * 10.0)*(1<<q);
     }
     puts("## ------------ Original Signal ------------ ##");
     for (i = 0; i < n; i++)
